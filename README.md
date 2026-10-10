@@ -9,12 +9,11 @@ Aplikasi chat AI mandiri yang tampil di browser ponsel dan berjalan sebagai webs
 
 ## Instal di Termux dari GitHub
 
-Ganti `NAMA_GITHUB` dengan pemilik/repo tempat proyek ini diunggah:
 
 ```sh
 pkg update -y
 pkg install -y git nodejs-lts
- git clone https://github.com/NAMA_GITHUB/termux-ai-webserver.git
+ git clone https://github.com/husein2014123/termux-ai-webserver.git
 cd termux-ai-webserver
 ```
 
