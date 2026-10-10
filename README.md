@@ -2,6 +2,10 @@
 
 Aplikasi chat AI Node.js ringan, dapat dijalankan lokal di Termux atau di-deploy sebagai Worker publik di Cloudflare. Login dengan satu kata sandi bersama diwajibkan. Kata sandi dan API key disimpan sebagai rahasia server dan tidak diletakkan di kode browser atau GitHub.
 
+## Hubungi admin
+
+Untuk pembelian atau bantuan key, hubungi admin melalui [WhatsApp](https://wa.me/6281398034284). Nomor ini dipublikasikan atas permintaan pemilik repository.
+
 ## Hosting gratis dengan Cloudflare Workers
 
 Cloudflare Workers Free saat ini mencakup **100.000 permintaan Worker per hari** dengan **10 ms CPU per pemanggilan**; permintaan aset statis tidak dibatasi/ditagihkan sebagai request Worker. Cloudflare Workers Builds dapat menghubungkan GitHub dan melakukan deployment otomatis setiap kali ada perubahan. Lihat [harga dan batas resmi](https://developers.cloudflare.com/workers/platform/pricing/) serta [panduan GitHub Builds](https://developers.cloudflare.com/workers/ci-cd/builds/). Kuota gratis berlaku untuk hosting, bukan pemakaian model OpenRouter.
