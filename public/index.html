@@ -2,14 +2,14 @@
 <html lang="id">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#111319"><meta name="description" content="Asisten AI pribadi yang berjalan aman di webserver.">
+  <meta name="theme-color" content="#111319"><meta name="description" content="Asisten AI RuangAI dengan lisensi resmi.">
   <title>RuangAI — Asisten AI</title><link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <main class="app-shell locked" id="app-shell">
     <aside class="rail"><div class="brand-mark">r<span>·</span></div><button class="rail-button active" aria-label="Chat baru">✳</button><div class="rail-spacer"></div><div class="avatar">AI</div></aside>
     <section class="workspace">
-      <header class="topbar"><div class="brand"><span class="brand-word">ruang<span>ai</span></span><span class="model-tag" id="model-tag">AI assistant</span></div><div class="top-actions"><div class="status"><i id="status-dot"></i><span id="status-text">Memeriksa server</span></div><button class="logout-button" id="logout-button" type="button" hidden>Keluar</button></div></header>
+      <header class="topbar"><div class="brand"><span class="brand-word">ruang<span>ai</span></span><span class="model-tag" id="model-tag">AI assistant</span></div><div class="top-actions"><div class="status"><i id="status-dot"></i><span id="status-text">Memeriksa server</span></div><button class="logout-button" id="logout-button" type="button" hidden>Ganti key</button></div></header>
       <section class="conversation" id="conversation" aria-live="polite">
         <div class="welcome" id="welcome"><div class="orb"><span>✳</span></div><p class="eyebrow">ASISTEN AI PRIBADI</p><h1>Ide dimulai<br><em>dari sini.</em></h1><p class="intro">Tanyakan apa saja. Brainstorm, belajar, menulis, atau pecahkan masalah bersama.</p>
           <div class="suggestions"><button data-prompt="Jelaskan cara kerja kecerdasan buatan dengan bahasa sederhana">✳ <span>Jelaskan AI dengan sederhana</span><b>↗</b></button><button data-prompt="Bantu saya membuat rencana belajar coding selama 30 hari">⌘ <span>Buat rencana belajar coding</span><b>↗</b></button><button data-prompt="Berikan 5 ide proyek kecil yang bisa dibuat dengan JavaScript">◇ <span>Cari ide proyek JavaScript</span><b>↗</b></button><button data-prompt="Bantu saya menulis pesan yang sopan untuk meminta jadwal ulang rapat">↗ <span>Tulis pesan profesional</span><b>↗</b></button></div>
@@ -19,10 +19,10 @@
     </section>
     <section class="auth-gate" id="auth-gate" aria-labelledby="login-title">
       <form class="auth-card" id="login-form">
-        <div class="orb auth-orb"><span>✳</span></div><p class="eyebrow">RUANG PRIBADI</p><h1 id="login-title">Masuk ke<br><em>RuangAI.</em></h1><p class="auth-copy">Masukkan kata sandi untuk membuka asisten AI.</p>
-        <label class="password-label" for="login-password">Kata sandi</label><input id="login-password" name="password" type="password" autocomplete="current-password" required maxlength="256" placeholder="Kata sandi akses">
-        <p class="auth-error" id="auth-error" role="alert" aria-live="polite"></p><button class="login-button" id="login-button" type="submit">Masuk <span>↗</span></button>
-        <p class="auth-footnote">Akses dilindungi oleh pemilik aplikasi.</p>
+        <div class="orb auth-orb"><span>✳</span></div><p class="eyebrow">LISENSI RUANGAI</p><h1>Masuk ke<br><em>RuangAI.</em></h1><p class="auth-copy">Masukkan key lisensi yang Anda terima dari admin untuk memulai sesi ini.</p>
+        <label class="password-label" for="login-password">Key lisensi</label><input id="login-password" name="licenseKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="2048" placeholder="RZAI1.…">
+        <p class="auth-error" id="auth-error" role="alert" aria-live="polite"></p><button class="login-button" id="login-button" type="submit">Verifikasi key <span>↗</span></button>
+        <p class="auth-footnote">Belum punya key? <a href="https://wa.me/6281398034284?text=Halo%20admin%2C%20saya%20ingin%20membeli%20key%20lisensi%20RuangAI." target="_blank" rel="noopener noreferrer">Hubungi admin via WhatsApp</a></p>
       </form>
     </section>
   </main><script src="/app.js" defer></script>

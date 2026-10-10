@@ -1,92 +1,77 @@
-# RuangAI — OpenRouter chat untuk Termux & Cloudflare Workers
+# RuangAI — lisensi chat AI untuk Termux & Cloudflare Workers
 
-Aplikasi chat AI Node.js ringan, dapat dijalankan lokal di Termux atau di-deploy sebagai Worker publik di Cloudflare. Login dengan satu kata sandi bersama diwajibkan. Kata sandi dan API key disimpan sebagai rahasia server dan tidak diletakkan di kode browser atau GitHub.
+RuangAI adalah chat AI ringan untuk browser, Termux, dan Cloudflare Workers. Pengguna memasukkan **key lisensi RuangAI** sebelum menggunakan chat. Admin menerbitkan lisensi setelah memeriksa pembelian secara manual melalui WhatsApp. Semua permintaan AI memakai OpenRouter key admin; **biaya model dibebankan ke akun admin**.
 
 ## Hubungi admin
 
-Untuk pembelian atau bantuan key, hubungi admin melalui [WhatsApp](https://wa.me/6281398034284). Nomor ini dipublikasikan atas permintaan pemilik repository.
+Untuk menanyakan atau membeli lisensi, hubungi admin melalui [WhatsApp](https://wa.me/6281398034284). Nomor ini ditambahkan atas permintaan pemilik repository.
 
-## Hosting gratis dengan Cloudflare Workers
+## Hosting Cloudflare gratis
 
-Cloudflare Workers Free saat ini mencakup **100.000 permintaan Worker per hari** dengan **10 ms CPU per pemanggilan**; permintaan aset statis tidak dibatasi/ditagihkan sebagai request Worker. Cloudflare Workers Builds dapat menghubungkan GitHub dan melakukan deployment otomatis setiap kali ada perubahan. Lihat [harga dan batas resmi](https://developers.cloudflare.com/workers/platform/pricing/) serta [panduan GitHub Builds](https://developers.cloudflare.com/workers/ci-cd/builds/). Kuota gratis berlaku untuk hosting, bukan pemakaian model OpenRouter.
+Workers Free menyediakan **100.000 permintaan Worker per hari** dan batas **10 ms CPU per pemanggilan**. Aset statis pada konfigurasi ini tidak dihitung sebagai permintaan Worker. Cloudflare Workers Builds mendukung deployment dari GitHub. Hosting gratis **tidak** membayar pemakaian model OpenRouter. Lihat [batas resmi](https://developers.cloudflare.com/workers/platform/pricing/) dan [panduan integrasi GitHub](https://developers.cloudflare.com/workers/ci-cd/builds/).
 
-Konfigurasi [`wrangler.jsonc`](wrangler.jsonc) dan backend [`cloudflare/worker.js`](cloudflare/worker.js) sudah disiapkan.
+1. Di Cloudflare, buka **Workers & Pages → Create application → Import a repository** dan pilih `husein2014123/termux-ai-webserver`.
+2. Pastikan root repository dan `wrangler.jsonc` terdeteksi, lalu deploy Worker. Push berikutnya dapat di-deploy otomatis melalui Workers Builds.
+3. Di **Settings → Variables and Secrets**, buat empat nilai berikut sebagai **secrets** Cloudflare, bukan variables biasa. Jangan masukkan secret ke GitHub atau chat:
+   - `OPENROUTER_API_KEY` — API key OpenRouter admin.
+   - `LICENSE_SIGNING_SECRET` — rahasia acak setidaknya 32 byte untuk menandatangani lisensi. Contoh generator lokal: `openssl rand -hex 32`.
+   - `ADMIN_PASSWORD` — password admin yang kuat, unik, minimal 16 karakter.
+   - `ADMIN_PATH` — path admin privat yang acak. Buat, misalnya, dengan `printf '/manage-%s' "$(openssl rand -hex 20)"`; simpan nilainya sendiri di password manager. Path ini tidak disimpan di source publik.
+4. Atur spending limit di akun/key OpenRouter sebelum memberi key kepada siapa pun. Setelah secrets siap, deploy ulang Worker.
+5. Catat alamat `*.workers.dev` yang dibuat Cloudflare serta nilai `ADMIN_PATH` secara pribadi. URL panel admin adalah alamat Worker diikuti nilai `ADMIN_PATH`; **jangan publikasikan URL/path tersebut**. Aplikasi dan kode GitHub tidak menampilkan tautan ke panel.
 
-1. Buat atau masuk ke akun Cloudflare, kemudian buka **Workers & Pages → Create application → Get started → Import a repository**.
-2. Hubungkan GitHub dan pilih repository `husein2014123/termux-ai-webserver`.
-3. Pastikan root repository dan konfigurasi `wrangler.jsonc` terdeteksi, lalu pilih **Save and Deploy**. Wrangler config menunjuk ke file Worker serta folder `public/`.
-4. Setelah Worker dibuat, buka **Settings → Variables and Secrets** (nama bagian dapat berubah), lalu tambahkan dua nilai berikut sebagai **secret**:
-   - `APP_PASSWORD` — pilih kata sandi yang panjang dan unik, lalu bagikan hanya kepada orang yang Anda izinkan.
-   - `OPENROUTER_API_KEY` — API key dari [OpenRouter Keys](https://openrouter.ai/keys).
-5. Deploy ulang atau restart Worker. Buka alamat `*.workers.dev` yang diberikan Cloudflare dan login dengan `APP_PASSWORD`.
+Setelah pembayaran dikonfirmasi lewat WhatsApp, admin membuka panel privat, memilih durasi **1–3650 hari**, membuat key, lalu mengirim key lisensi langsung kepada pembeli. Tidak ada checkout atau pemrosesan pembayaran otomatis.
 
-Jika dashboard meminta pengaturan build, gunakan perintah deployment `npx wrangler deploy`. Jangan menambahkan nilai secret ke `wrangler.jsonc`, `.env.example`, perintah shell yang akan disimpan, atau commit GitHub.
+## Jalankan di Termux
 
-### Perlindungan dan biaya
-
-Password adalah **satu kata sandi bersama**, bukan akun berbeda untuk tiap pengguna. Siapa pun yang mengetahui password dapat memakai API OpenRouter milik Anda. Login membatasi upaya masuk (5 kegagalan per alamat IP tiap 15 menit), tetapi limit ini best-effort pada memori Worker dan bukan perlindungan kuota yang kuat. Tetapkan spending limit di OpenRouter, jaga password, dan ganti bila bocor. Trafik chat OpenRouter dapat berbiaya walaupun hosting Worker gratis.
-
-## Jalankan lokal di Termux
+Deploy Worker Cloudflare terlebih dahulu supaya lisensi dan chat memiliki server pusat. Lalu di Termux:
 
 ```sh
 pkg update -y
 pkg install -y git nodejs-lts
 git clone https://github.com/husein2014123/termux-ai-webserver.git
 cd termux-ai-webserver
-export APP_PASSWORD='kata-sandi-kuat-anda'
-export OPENROUTER_API_KEY='isi-api-key-openrouter-anda'
-export AI_PROVIDER='openrouter'
-export AI_MODEL='openrouter/auto'
-node server.js
+export LICENSE_API_URL='https://nama-worker-akun-anda.workers.dev'
+npm start
 ```
 
-Buka `http://127.0.0.1:3000`, masuk dengan password tersebut, lalu gunakan chat. Tidak perlu `npm install` untuk Termux. Hentikan server dengan `Ctrl+C`.
+Buka `http://127.0.0.1:3000`. Layar awal akan meminta key lisensi, memeriksanya ke Worker, dan membuka chat bila masih berlaku. Key hanya disimpan dalam `sessionStorage` pada tab browser dan dikirim ke Worker melalui HTTPS saat verifikasi/chat. Termux tidak menyimpan OpenRouter key admin. Hentikan server dengan `Ctrl+C`.
 
-Agar tidak mengetik key tiap kali, simpan perintah `export` di file `~/.ruangai-env` di luar repository, lindungi dengan `chmod 600 ~/.ruangai-env`, lalu jalankan `source ~/.ruangai-env` sebelum `node server.js`.
+Untuk mengganti port: `PORT=3001 npm start`, lalu buka `http://127.0.0.1:3001`. Ganti `nama-worker-akun-anda` dengan alamat Worker Anda. File `.env.example` hanya template; jangan isi lalu commit secret.
 
-## Model dan API
+## Sifat dan batasan lisensi
 
-`openrouter/auto` menyerahkan pemilihan model ke router OpenRouter. Untuk memilih model sendiri, atur `AI_MODEL` ke slug yang tersedia di [katalog OpenRouter](https://openrouter.ai/models). Biaya penggunaan model mengikuti penyedia dan saldo akun OpenRouter.
+Lisensi ditandatangani oleh Worker dan dapat diverifikasi tanpa database. Key adalah bearer: siapa pun yang memilikinya dapat menggunakannya sampai kedaluwarsa, termasuk pada beberapa perangkat. Versi ini **belum dapat mencabut satu key tertentu**. Mengganti `LICENSE_SIGNING_SECRET` membatalkan semua lisensi yang pernah diterbitkan. Simpan password dan path admin dengan aman.
 
-Mode OpenAI langsung tetap tersedia: atur `AI_PROVIDER=openai`, `OPENAI_API_KEY`, dan bila perlu `AI_BASE_URL`/`AI_MODEL` pada environment server.
+Worker membatasi respons hingga 2.048 token dan menerapkan batas sementara 12 permintaan per menit per lisensi per isolate. Batas laju ini best-effort, bukan kuota billing keras; tetapkan spending limit OpenRouter dan pantau pemakaiannya. Hosting Cloudflare bisa gratis, tetapi model OpenRouter dapat menimbulkan biaya bagi admin.
 
-## Environment variables
+## Environment
 
-| Variabel | Default | Keterangan |
+| Nama | Tempat | Kegunaan |
 |---|---|---|
-| `APP_PASSWORD` | wajib | Kata sandi bersama; wajib diatur untuk server lokal maupun Worker |
-| `OPENROUTER_API_KEY` | — | Rahasia untuk backend OpenRouter |
-| `AI_PROVIDER` | otomatis | `openrouter` atau `openai` |
-| `AI_MODEL` | `openrouter/auto` atau `gpt-4o-mini` | Slug model |
-| `AI_BASE_URL` | sesuai provider | Base URL API opsional |
-| `PORT` | `3000` lokal | Port untuk server Node.js di Termux |
-| `SITE_URL` | — | URL publik untuk atribusi OpenRouter (opsional) |
-| `OPENROUTER_APP_TITLE` | `RuangAI` | Header judul aplikasi OpenRouter (opsional) |
+| `OPENROUTER_API_KEY` | Cloudflare Secret | API key admin; seluruh penggunaan AI ditagihkan ke akun ini |
+| `LICENSE_SIGNING_SECRET` | Cloudflare Secret | Menandatangani dan memverifikasi lisensi |
+| `ADMIN_PASSWORD` | Cloudflare Secret | Melindungi pembuatan lisensi |
+| `ADMIN_PATH` | Cloudflare Secret | Path admin acak yang harus disimpan privat |
+| `LICENSE_API_URL` | Termux | Alamat Worker untuk verifikasi key dan chat |
+| `AI_MODEL` | Cloudflare Variable | Model OpenRouter, default `openrouter/auto` |
+| `PORT` | Termux | Port lokal, default `3000` |
 
 ## Struktur
 
-- `server.js` — server Node.js untuk Termux.
-- `cloudflare/worker.js` — backend Cloudflare Worker dengan auth dan OpenRouter.
-- `public/` — UI chat dan layar login.
-- `wrangler.jsonc` — konfigurasi deployment Cloudflare.
-
-## Update source
-
-```sh
-cd ~/termux-ai-webserver
-git pull
-```
-
-Jika repository tersambung ke Cloudflare Workers Builds, push ke branch deployment akan memicu build/deploy otomatis.
+- `server.js` — server/proxy lokal Termux; tidak menyimpan OpenRouter key admin.
+- `cloudflare/worker.js` — penerbit dan validator lisensi, serta chat OpenRouter.
+- `cloudflare/admin-ui.js` — panel penerbitan yang dikirim hanya pada `ADMIN_PATH`.
+- `public/` — UI chat dan input lisensi.
+- `wrangler.jsonc` — konfigurasi Worker Cloudflare.
 
 ## Troubleshooting
 
-- **Server berhenti dengan `APP_PASSWORD wajib diatur`** — atur `APP_PASSWORD` sebelum menjalankan versi lokal.
-- **Password salah / terlalu banyak percobaan** — pastikan password benar; tunggu 15 menit setelah 5 percobaan gagal.
-- **Chat menyatakan OpenRouter key belum diatur** — atur `OPENROUTER_API_KEY` sebagai secret pada Worker dan deploy ulang.
-- **401 OpenRouter** — periksa API key dan akses/limit akun OpenRouter.
-- **Model tidak tersedia** — pilih slug aktif dari katalog OpenRouter.
-- **Termux: port sudah dipakai** — jalankan `PORT=3001 node server.js`, lalu buka `http://127.0.0.1:3001`.
+- **Server lisensi belum dikonfigurasi di Termux** — atur `LICENSE_API_URL` ke alamat Worker yang benar.
+- **Key tidak valid/kedaluwarsa** — minta admin memeriksa masa aktif dan menerbitkan key baru.
+- **Layanan Worker belum siap** — periksa empat Cloudflare secrets, lalu deploy ulang.
+- **OpenRouter menolak permintaan** — periksa saldo/spending limit, akses API, dan slug model.
+- **Port sudah dipakai** — jalankan `PORT=3001 npm start`.
 
 ## Lisensi
 

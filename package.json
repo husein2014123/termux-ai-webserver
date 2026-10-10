@@ -1,8 +1,8 @@
 {
   "name": "termux-ai-webserver",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
-  "description": "Password-protected OpenRouter AI chat for Termux and Cloudflare Workers",
+  "description": "License-protected OpenRouter AI chat for Termux and Cloudflare Workers",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

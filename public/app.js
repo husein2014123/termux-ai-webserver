@@ -1,9 +1,11 @@
 const $ = id => document.getElementById(id);
 const form = $('chat-form'), input = $('prompt'), messagesEl = $('messages');
 const loginForm = $('login-form'), loginInput = $('login-password');
+const LICENSE_SLOT = 'ruangai_license_session';
 const history = [];
 let busy = false, authenticated = false;
-
+function currentLicense() { try { return sessionStorage.getItem(LICENSE_SLOT) || ''; } catch { return ''; } }
+function clearLicense() { try { sessionStorage.removeItem(LICENSE_SLOT); } catch {} }
 function setAuthenticated(value) {
   authenticated = value;
   $('app-shell').classList.toggle('locked', !value);
@@ -11,13 +13,34 @@ function setAuthenticated(value) {
   $('logout-button').hidden = !value;
   if (!value) setTimeout(() => loginInput.focus(), 30);
 }
+async function getStatus() {
+  const response = await fetch('/api/status', { cache: 'no-store' });
+  return response.json();
+}
+async function verifyLicense(licenseKey) {
+  const response = await fetch('/api/license/verify', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ licenseKey })
+  });
+  const data = await response.json();
+  if (!response.ok || !data.valid) { const error = new Error(data.error || 'Key lisensi tidak valid.'); error.status = response.status; throw error; }
+  return data;
+}
 async function checkStatus() {
   try {
-    const r = await fetch('/api/status', { cache: 'no-store' }); const data = await r.json();
-    setAuthenticated(Boolean(data.authenticated));
+    const data = await getStatus();
     $('status-dot').className = data.ready ? 'ready' : 'offline';
-    $('status-text').textContent = data.ready ? 'Server terhubung' : 'API key belum diatur';
-    $('model-tag').textContent = data.model || 'AI assistant';
+    $('status-text').textContent = data.ready ? 'Server lisensi siap' : 'Server belum dikonfigurasi';
+    $('model-tag').textContent = data.model || 'OpenRouter';
+    if (!data.ready) { setAuthenticated(false); return; }
+    const key = currentLicense();
+    if (!key) { setAuthenticated(false); return; }
+    try { await verifyLicense(key); setAuthenticated(true); }
+    catch (error) {
+      if (error.status === 401) { clearLicense(); $('auth-error').textContent = 'Key tidak valid atau masa aktifnya telah berakhir.'; }
+      else $('auth-error').textContent = error.message || 'Layanan lisensi sementara tidak tersedia.';
+      setAuthenticated(false);
+    }
   } catch {
     setAuthenticated(false); $('status-dot').className = 'offline'; $('status-text').textContent = 'Server tidak terjangkau';
   }
@@ -26,14 +49,16 @@ loginForm.addEventListener('submit', async e => {
   e.preventDefault(); if (busy) return;
   busy = true; $('login-button').disabled = true; $('auth-error').textContent = '';
   try {
-    const response = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: loginInput.value }) });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Login gagal.');
-    loginInput.value = ''; await checkStatus(); input.focus();
-  } catch (error) { $('auth-error').textContent = error.message || 'Login gagal. Coba kembali.'; loginInput.select(); }
+    const licenseKey = loginInput.value.trim();
+    await verifyLicense(licenseKey);
+    try { sessionStorage.setItem(LICENSE_SLOT, licenseKey); }
+    catch { throw new Error('Browser tidak dapat menyimpan key untuk sesi ini. Coba buka tab biasa.'); }
+    loginInput.value = ''; setAuthenticated(true); input.focus();
+  } catch (error) { $('auth-error').textContent = error.message || 'Verifikasi gagal. Coba kembali.'; loginInput.select(); }
   finally { busy = false; $('login-button').disabled = false; }
 });
 $('logout-button').addEventListener('click', async () => {
+  clearLicense();
   await fetch('/api/logout', { method: 'POST' }).catch(() => {});
   history.length = 0; messagesEl.replaceChildren(); $('welcome').hidden = false; setAuthenticated(false);
 });
@@ -51,9 +76,9 @@ async function submit(text) {
   history.push({ role: 'user', content: text }); addMessage('user', text);
   const loader = document.createElement('div'); loader.className = 'typing'; loader.innerHTML = '<span></span><span></span><span></span>'; messagesEl.append(loader);
   try {
-    const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: history }) });
+    const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ licenseKey: currentLicense(), messages: history }) });
     const data = await response.json(); loader.remove();
-    if (response.status === 401) { await checkStatus(); throw new Error('Sesi berakhir. Silakan login kembali.'); }
+    if (response.status === 401) { clearLicense(); setAuthenticated(false); throw new Error('Key tidak valid atau sudah kedaluwarsa.'); }
     if (!response.ok) throw new Error(data.error || 'Permintaan gagal.');
     history.push({ role: 'assistant', content: data.reply }); addMessage('assistant', data.reply);
   } catch (error) { loader.remove(); addMessage('assistant', error.message, 'error'); history.pop(); }
