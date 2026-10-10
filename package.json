@@ -1,10 +1,14 @@
 {
   "name": "termux-ai-webserver",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
-  "description": "Lightweight OpenAI-compatible AI chat webserver for Termux",
+  "description": "Password-protected OpenRouter AI chat for Termux and Cloudflare Workers",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
+  "scripts": {
+    "start": "node server.js",
+    "dev:cloudflare": "npx --yes wrangler dev",
+    "deploy:cloudflare": "npx --yes wrangler deploy"
+  },
   "engines": { "node": ">=18" },
   "license": "MIT"
 }

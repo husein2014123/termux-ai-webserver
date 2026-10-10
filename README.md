@@ -1,116 +1,88 @@
-# RuangAI — AI Chat Webserver untuk Termux
+# RuangAI — OpenRouter chat untuk Termux & Cloudflare Workers
 
-Aplikasi chat AI ringan berbasis Node.js yang dapat berjalan di Termux. Tidak memerlukan framework maupun dependency npm. API key disimpan hanya pada environment server, tidak dikirim ke browser.
+Aplikasi chat AI Node.js ringan, dapat dijalankan lokal di Termux atau di-deploy sebagai Worker publik di Cloudflare. Login dengan satu kata sandi bersama diwajibkan. Kata sandi dan API key disimpan sebagai rahasia server dan tidak diletakkan di kode browser atau GitHub.
 
-## Persyaratan
+## Hosting gratis dengan Cloudflare Workers
 
-- Android dengan [Termux](https://github.com/termux/termux-app) terpasang (disarankan dari F-Droid atau GitHub resmi Termux).
-- Akun dan API key dari penyedia model. **OpenRouter didukung langsung** dan dapat mengakses katalog model dari satu endpoint. Pemakaian model dapat berbayar sesuai harga dan saldo akun penyedia.
+Cloudflare Workers Free saat ini mencakup **100.000 permintaan Worker per hari** dengan **10 ms CPU per pemanggilan**; permintaan aset statis tidak dibatasi/ditagihkan sebagai request Worker. Cloudflare Workers Builds dapat menghubungkan GitHub dan melakukan deployment otomatis setiap kali ada perubahan. Lihat [harga dan batas resmi](https://developers.cloudflare.com/workers/platform/pricing/) serta [panduan GitHub Builds](https://developers.cloudflare.com/workers/ci-cd/builds/). Kuota gratis berlaku untuk hosting, bukan pemakaian model OpenRouter.
 
-## Instal di Termux dari GitHub
+Konfigurasi [`wrangler.jsonc`](wrangler.jsonc) dan backend [`cloudflare/worker.js`](cloudflare/worker.js) sudah disiapkan.
+
+1. Buat atau masuk ke akun Cloudflare, kemudian buka **Workers & Pages → Create application → Get started → Import a repository**.
+2. Hubungkan GitHub dan pilih repository `husein2014123/termux-ai-webserver`.
+3. Pastikan root repository dan konfigurasi `wrangler.jsonc` terdeteksi, lalu pilih **Save and Deploy**. Wrangler config menunjuk ke file Worker serta folder `public/`.
+4. Setelah Worker dibuat, buka **Settings → Variables and Secrets** (nama bagian dapat berubah), lalu tambahkan dua nilai berikut sebagai **secret**:
+   - `APP_PASSWORD` — pilih kata sandi yang panjang dan unik, lalu bagikan hanya kepada orang yang Anda izinkan.
+   - `OPENROUTER_API_KEY` — API key dari [OpenRouter Keys](https://openrouter.ai/keys).
+5. Deploy ulang atau restart Worker. Buka alamat `*.workers.dev` yang diberikan Cloudflare dan login dengan `APP_PASSWORD`.
+
+Jika dashboard meminta pengaturan build, gunakan perintah deployment `npx wrangler deploy`. Jangan menambahkan nilai secret ke `wrangler.jsonc`, `.env.example`, perintah shell yang akan disimpan, atau commit GitHub.
+
+### Perlindungan dan biaya
+
+Password adalah **satu kata sandi bersama**, bukan akun berbeda untuk tiap pengguna. Siapa pun yang mengetahui password dapat memakai API OpenRouter milik Anda. Login membatasi upaya masuk (5 kegagalan per alamat IP tiap 15 menit), tetapi limit ini best-effort pada memori Worker dan bukan perlindungan kuota yang kuat. Tetapkan spending limit di OpenRouter, jaga password, dan ganti bila bocor. Trafik chat OpenRouter dapat berbiaya walaupun hosting Worker gratis.
+
+## Jalankan lokal di Termux
 
 ```sh
 pkg update -y
 pkg install -y git nodejs-lts
 git clone https://github.com/husein2014123/termux-ai-webserver.git
 cd termux-ai-webserver
-```
-
-Tidak perlu menjalankan `npm install`.
-
-## Jalankan dengan OpenRouter (disarankan)
-
-1. Buat API key di [OpenRouter](https://openrouter.ai/keys).
-2. Atur key dan model pada sesi Termux yang sama, lalu jalankan server:
-
-```sh
+export APP_PASSWORD='kata-sandi-kuat-anda'
 export OPENROUTER_API_KEY='isi-api-key-openrouter-anda'
+export AI_PROVIDER='openrouter'
 export AI_MODEL='openrouter/auto'
 node server.js
 ```
 
-3. Buka **http://127.0.0.1:3000** di browser Android. Biarkan Termux berjalan. Hentikan server dengan `Ctrl+C`.
+Buka `http://127.0.0.1:3000`, masuk dengan password tersebut, lalu gunakan chat. Tidak perlu `npm install` untuk Termux. Hentikan server dengan `Ctrl+C`.
 
-`openrouter/auto` membiarkan router OpenRouter memilih model. Anda juga dapat mengganti `AI_MODEL` dengan ID model yang tersedia di katalog [OpenRouter Models](https://openrouter.ai/models), misalnya `openai/gpt-4o-mini`, jika model tersebut tersedia untuk akun Anda.
+Agar tidak mengetik key tiap kali, simpan perintah `export` di file `~/.ruangai-env` di luar repository, lindungi dengan `chmod 600 ~/.ruangai-env`, lalu jalankan `source ~/.ruangai-env` sebelum `node server.js`.
 
-Opsional untuk atribusi aplikasi OpenRouter:
+## Model dan API
 
-```sh
-export SITE_URL='https://alamat-situs-anda.example'
-export OPENROUTER_APP_TITLE='RuangAI'
-```
+`openrouter/auto` menyerahkan pemilihan model ke router OpenRouter. Untuk memilih model sendiri, atur `AI_MODEL` ke slug yang tersedia di [katalog OpenRouter](https://openrouter.ai/models). Biaya penggunaan model mengikuti penyedia dan saldo akun OpenRouter.
 
-## OpenAI atau endpoint kompatibel lainnya
+Mode OpenAI langsung tetap tersedia: atur `AI_PROVIDER=openai`, `OPENAI_API_KEY`, dan bila perlu `AI_BASE_URL`/`AI_MODEL` pada environment server.
 
-Aplikasi tetap mendukung API OpenAI dan layanan kompatibel OpenAI Chat Completions:
-
-```sh
-export OPENAI_API_KEY='isi-api-key-anda'
-export AI_BASE_URL='https://api.openai.com/v1'
-export AI_MODEL='gpt-4o-mini'
-node server.js
-```
-
-Untuk provider lain, sesuaikan `AI_BASE_URL` (base URL tanpa `/chat/completions`), `AI_MODEL`, dan `OPENAI_API_KEY`. Jika memakai provider non-OpenRouter dengan nama key berbeda, isi ke `OPENAI_API_KEY` pada environment server.
-
-## Biar dapat dibuka dari mana saja
-
-Menambahkan OpenRouter **tidak dengan sendirinya meng-host situs**. Saat dijalankan di Termux, situs hanya aktif ketika ponsel dan proses Termux menyala, dan alamat `127.0.0.1` hanya dapat dibuka dari ponsel tersebut.
-
-Untuk tautan publik yang dapat dibuka dari perangkat lain, deploy aplikasi Node.js ini ke layanan hosting publik yang mendukung Node.js. Hubungkan repository GitHub ini, atur perintah start `node server.js`, lalu masukkan rahasia `OPENROUTER_API_KEY` pada pengaturan environment/secret di hosting (jangan di source, commit, atau browser). Set `AI_MODEL=openrouter/auto` juga pada environment hosting. Setelah hosting memberi URL HTTPS, alamat tersebut dapat dibuka dari perangkat mana pun.
-
-**Keamanan dan biaya:** situs publik saat ini tidak memiliki akun pengguna maupun autentikasi. Siapa pun yang mengetahui tautannya dapat mengirim permintaan AI memakai saldo/API key Anda. Sebelum membagikan tautan publik, batasi saldo/limit pengeluaran key pada OpenRouter dan gunakan autentikasi/rate limiting di depan aplikasi bila akan dibuka luas. Jangan mengekspos server Termux polos langsung ke internet.
-
-## Konfigurasi environment
+## Environment variables
 
 | Variabel | Default | Keterangan |
 |---|---|---|
-| `PORT` | `3000` | Port webserver (hosting biasanya menentukan port sendiri) |
-| `HOST` | `0.0.0.0` | Interface server |
-| `AI_PROVIDER` | otomatis dari key | `openrouter` atau `openai`; berguna untuk memilih provider secara eksplisit |
-| `OPENROUTER_API_KEY` | — | Rahasia API key OpenRouter; disimpan pada environment server |
-| `OPENAI_API_KEY` | — | Key OpenAI/provider OpenAI-compatible |
-| `AI_BASE_URL` | sesuai provider | Endpoint API khusus (opsional) |
-| `AI_MODEL` | `openrouter/auto` atau `gpt-4o-mini` | ID model; default mengikuti provider yang dipilih |
-| `SITE_URL` | — | URL publik untuk header atribusi OpenRouter (opsional) |
-| `OPENROUTER_APP_TITLE` | `RuangAI` | Nama aplikasi untuk header atribusi (opsional) |
-| `AI_PROVIDER_NAME` | sesuai provider | Label provider pada status (opsional) |
+| `APP_PASSWORD` | wajib | Kata sandi bersama; wajib diatur untuk server lokal maupun Worker |
+| `OPENROUTER_API_KEY` | — | Rahasia untuk backend OpenRouter |
+| `AI_PROVIDER` | otomatis | `openrouter` atau `openai` |
+| `AI_MODEL` | `openrouter/auto` atau `gpt-4o-mini` | Slug model |
+| `AI_BASE_URL` | sesuai provider | Base URL API opsional |
+| `PORT` | `3000` lokal | Port untuk server Node.js di Termux |
+| `SITE_URL` | — | URL publik untuk atribusi OpenRouter (opsional) |
+| `OPENROUTER_APP_TITLE` | `RuangAI` | Header judul aplikasi OpenRouter (opsional) |
 
-Jika kedua API key diisi sekaligus, tetapkan `AI_PROVIDER=openrouter` atau `AI_PROVIDER=openai` supaya pemilihannya jelas.
+## Struktur
 
-## Simpan konfigurasi lokal di Termux
+- `server.js` — server Node.js untuk Termux.
+- `cloudflare/worker.js` — backend Cloudflare Worker dengan auth dan OpenRouter.
+- `public/` — UI chat dan layar login.
+- `wrangler.jsonc` — konfigurasi deployment Cloudflare.
 
-Agar tidak mengetik key tiap kali, buat file **di luar repository**:
-
-```sh
-nano ~/.ruangai-env
-```
-
-Masukkan `export OPENROUTER_API_KEY='...'` dan `export AI_MODEL='openrouter/auto'`, simpan, lalu:
-
-```sh
-chmod 600 ~/.ruangai-env
-source ~/.ruangai-env
-cd ~/termux-ai-webserver
-node server.js
-```
-
-Jangan membagikan file tersebut atau memasukkan API key ke GitHub.
-
-## Update kode
+## Update source
 
 ```sh
 cd ~/termux-ai-webserver
 git pull
 ```
 
+Jika repository tersambung ke Cloudflare Workers Builds, push ke branch deployment akan memicu build/deploy otomatis.
+
 ## Troubleshooting
 
-- **Kunci OpenRouter belum diatur** — ekspor `OPENROUTER_API_KEY` pada sesi Termux yang sama sebelum menjalankan server.
-- **401 / unauthorized** — periksa API key dan status akun/provider.
-- **404 model atau endpoint** — pastikan ID model dan endpoint cocok dengan dokumentasi penyedia.
-- **Port sudah digunakan** — jalankan `PORT=3001 node server.js`, lalu buka `http://127.0.0.1:3001`.
-- **Chat gagal di hosting** — pastikan secret `OPENROUTER_API_KEY` sudah diatur di hosting dan server di-restart setelah perubahan environment.
+- **Server berhenti dengan `APP_PASSWORD wajib diatur`** — atur `APP_PASSWORD` sebelum menjalankan versi lokal.
+- **Password salah / terlalu banyak percobaan** — pastikan password benar; tunggu 15 menit setelah 5 percobaan gagal.
+- **Chat menyatakan OpenRouter key belum diatur** — atur `OPENROUTER_API_KEY` sebagai secret pada Worker dan deploy ulang.
+- **401 OpenRouter** — periksa API key dan akses/limit akun OpenRouter.
+- **Model tidak tersedia** — pilih slug aktif dari katalog OpenRouter.
+- **Termux: port sudah dipakai** — jalankan `PORT=3001 node server.js`, lalu buka `http://127.0.0.1:3001`.
 
 ## Lisensi
 
