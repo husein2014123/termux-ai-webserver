@@ -6,8 +6,12 @@ const { URL } = require('node:url');
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const ROOT = path.join(__dirname, 'public');
-const API_BASE = (process.env.AI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
-const MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
+const PROVIDER = (process.env.AI_PROVIDER || (process.env.OPENROUTER_API_KEY ? 'openrouter' : 'openai')).toLowerCase();
+const IS_OPENROUTER = PROVIDER === 'openrouter';
+const API_KEY = IS_OPENROUTER ? (process.env.OPENROUTER_API_KEY || '') : (process.env.OPENAI_API_KEY || '');
+const API_BASE = (process.env.AI_BASE_URL || (IS_OPENROUTER ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1')).replace(/\/$/, '');
+const MODEL = process.env.AI_MODEL || (IS_OPENROUTER ? 'openrouter/auto' : 'gpt-4o-mini');
+const PROVIDER_NAME = process.env.AI_PROVIDER_NAME || (IS_OPENROUTER ? 'OpenRouter' : 'OpenAI-compatible API');
 const MAX_BODY = 1024 * 1024;
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml' };
 
@@ -33,17 +37,22 @@ function readBody(req) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (req.method === 'GET' && url.pathname === '/api/status') {
-    return send(res, 200, { ready: Boolean(process.env.OPENAI_API_KEY), model: MODEL, provider: process.env.AI_PROVIDER_NAME || 'OpenAI-compatible API' });
+    return send(res, 200, { ready: Boolean(API_KEY), model: MODEL, provider: PROVIDER_NAME });
   }
   if (req.method === 'POST' && url.pathname === '/api/chat') {
-    if (!process.env.OPENAI_API_KEY) return send(res, 503, { error: 'API key belum diatur. Buka README untuk cara konfigurasi.' });
+    if (!API_KEY) return send(res, 503, { error: IS_OPENROUTER ? 'Kunci OpenRouter belum diatur. Tambahkan OPENROUTER_API_KEY pada environment server.' : 'API key belum diatur. Buka README untuk cara konfigurasi.' });
     try {
       const { messages } = await readBody(req);
       if (!Array.isArray(messages) || messages.length < 1 || messages.length > 40) return send(res, 400, { error: 'Riwayat chat tidak valid.' });
       const safeMessages = messages.map(m => ({ role: ['user', 'assistant', 'system'].includes(m?.role) ? m.role : 'user', content: String(m?.content ?? '').slice(0, 12000) }));
+      const headers = { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' };
+      if (IS_OPENROUTER) {
+        headers['X-OpenRouter-Title'] = process.env.OPENROUTER_APP_TITLE || 'RuangAI';
+        if (process.env.SITE_URL) headers['HTTP-Referer'] = process.env.SITE_URL;
+      }
       const upstream = await fetch(`${API_BASE}/chat/completions`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ model: MODEL, messages: safeMessages, temperature: 0.7 })
       });
       const data = await upstream.json().catch(() => ({}));
@@ -64,4 +73,4 @@ const server = http.createServer(async (req, res) => {
     res.end(data);
   });
 });
-server.listen(PORT, HOST, () => console.log(`Termux AI Webserver aktif di http://${HOST}:${PORT}`));
+server.listen(PORT, HOST, () => console.log(`Termux AI Webserver aktif di http://${HOST}:${PORT} (provider: ${PROVIDER_NAME}; model: ${MODEL})`));

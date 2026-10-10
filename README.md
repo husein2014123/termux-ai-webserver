@@ -1,28 +1,48 @@
 # RuangAI — AI Chat Webserver untuk Termux
 
-Aplikasi chat AI mandiri yang tampil di browser ponsel dan berjalan sebagai webserver Node.js di Termux. Tidak memerlukan framework atau dependency npm. Server menyimpan API key; key tidak pernah dikirim ke browser.
+Aplikasi chat AI ringan berbasis Node.js yang dapat berjalan di Termux. Tidak memerlukan framework maupun dependency npm. API key disimpan hanya pada environment server, tidak dikirim ke browser.
 
 ## Persyaratan
 
 - Android dengan [Termux](https://github.com/termux/termux-app) terpasang (disarankan dari F-Droid atau GitHub resmi Termux).
-- Akun dan API key dari penyedia model yang menyediakan endpoint **kompatibel OpenAI Chat Completions**. Biaya penggunaan API ditentukan penyedia; aplikasi ini bukan layanan Blackbox AI dan tidak menyertakan API key.
+- Akun dan API key dari penyedia model. **OpenRouter didukung langsung** dan dapat mengakses katalog model dari satu endpoint. Pemakaian model dapat berbayar sesuai harga dan saldo akun penyedia.
 
 ## Instal di Termux dari GitHub
-
-Ganti `NAMA_GITHUB` dengan pemilik/repo tempat proyek ini diunggah:
 
 ```sh
 pkg update -y
 pkg install -y git nodejs-lts
- git clone https://github.com/NAMA_GITHUB/termux-ai-webserver.git
+git clone https://github.com/husein2014123/termux-ai-webserver.git
 cd termux-ai-webserver
 ```
 
-Jika repositori Anda bernama lain, sesuaikan URL clone dan nama folder. Tidak perlu menjalankan `npm install`.
+Tidak perlu menjalankan `npm install`.
 
-## Jalankan
+## Jalankan dengan OpenRouter (disarankan)
 
-Isi endpoint dan API key dari provider Anda. Contoh berikut memakai endpoint OpenAI; jangan menaruh key di file frontend atau mengunggah key ke GitHub.
+1. Buat API key di [OpenRouter](https://openrouter.ai/keys).
+2. Atur key dan model pada sesi Termux yang sama, lalu jalankan server:
+
+```sh
+export OPENROUTER_API_KEY='isi-api-key-openrouter-anda'
+export AI_MODEL='openrouter/auto'
+node server.js
+```
+
+3. Buka **http://127.0.0.1:3000** di browser Android. Biarkan Termux berjalan. Hentikan server dengan `Ctrl+C`.
+
+`openrouter/auto` membiarkan router OpenRouter memilih model. Anda juga dapat mengganti `AI_MODEL` dengan ID model yang tersedia di katalog [OpenRouter Models](https://openrouter.ai/models), misalnya `openai/gpt-4o-mini`, jika model tersebut tersedia untuk akun Anda.
+
+Opsional untuk atribusi aplikasi OpenRouter:
+
+```sh
+export SITE_URL='https://alamat-situs-anda.example'
+export OPENROUTER_APP_TITLE='RuangAI'
+```
+
+## OpenAI atau endpoint kompatibel lainnya
+
+Aplikasi tetap mendukung API OpenAI dan layanan kompatibel OpenAI Chat Completions:
 
 ```sh
 export OPENAI_API_KEY='isi-api-key-anda'
@@ -31,19 +51,42 @@ export AI_MODEL='gpt-4o-mini'
 node server.js
 ```
 
-Buka browser Android ke **http://127.0.0.1:3000**. Biarkan sesi Termux berjalan. Hentikan server dengan `Ctrl+C`.
+Untuk provider lain, sesuaikan `AI_BASE_URL` (base URL tanpa `/chat/completions`), `AI_MODEL`, dan `OPENAI_API_KEY`. Jika memakai provider non-OpenRouter dengan nama key berbeda, isi ke `OPENAI_API_KEY` pada environment server.
 
-Untuk provider kompatibel lain, ganti `AI_BASE_URL` ke base URL API provider (tanpa `/chat/completions`) dan `AI_MODEL` ke ID model yang tersedia di akun provider. Variabel `AI_PROVIDER_NAME` opsional dan hanya untuk label status.
+## Biar dapat dibuka dari mana saja
 
-### Memakai ulang konfigurasi
+Menambahkan OpenRouter **tidak dengan sendirinya meng-host situs**. Saat dijalankan di Termux, situs hanya aktif ketika ponsel dan proses Termux menyala, dan alamat `127.0.0.1` hanya dapat dibuka dari ponsel tersebut.
 
-Agar tidak mengetik variabel setiap kali, buat file lokal `~/.ruangai-env` (file ini berada di luar folder repo):
+Untuk tautan publik yang dapat dibuka dari perangkat lain, deploy aplikasi Node.js ini ke layanan hosting publik yang mendukung Node.js. Hubungkan repository GitHub ini, atur perintah start `node server.js`, lalu masukkan rahasia `OPENROUTER_API_KEY` pada pengaturan environment/secret di hosting (jangan di source, commit, atau browser). Set `AI_MODEL=openrouter/auto` juga pada environment hosting. Setelah hosting memberi URL HTTPS, alamat tersebut dapat dibuka dari perangkat mana pun.
+
+**Keamanan dan biaya:** situs publik saat ini tidak memiliki akun pengguna maupun autentikasi. Siapa pun yang mengetahui tautannya dapat mengirim permintaan AI memakai saldo/API key Anda. Sebelum membagikan tautan publik, batasi saldo/limit pengeluaran key pada OpenRouter dan gunakan autentikasi/rate limiting di depan aplikasi bila akan dibuka luas. Jangan mengekspos server Termux polos langsung ke internet.
+
+## Konfigurasi environment
+
+| Variabel | Default | Keterangan |
+|---|---|---|
+| `PORT` | `3000` | Port webserver (hosting biasanya menentukan port sendiri) |
+| `HOST` | `0.0.0.0` | Interface server |
+| `AI_PROVIDER` | otomatis dari key | `openrouter` atau `openai`; berguna untuk memilih provider secara eksplisit |
+| `OPENROUTER_API_KEY` | — | Rahasia API key OpenRouter; disimpan pada environment server |
+| `OPENAI_API_KEY` | — | Key OpenAI/provider OpenAI-compatible |
+| `AI_BASE_URL` | sesuai provider | Endpoint API khusus (opsional) |
+| `AI_MODEL` | `openrouter/auto` atau `gpt-4o-mini` | ID model; default mengikuti provider yang dipilih |
+| `SITE_URL` | — | URL publik untuk header atribusi OpenRouter (opsional) |
+| `OPENROUTER_APP_TITLE` | `RuangAI` | Nama aplikasi untuk header atribusi (opsional) |
+| `AI_PROVIDER_NAME` | sesuai provider | Label provider pada status (opsional) |
+
+Jika kedua API key diisi sekaligus, tetapkan `AI_PROVIDER=openrouter` atau `AI_PROVIDER=openai` supaya pemilihannya jelas.
+
+## Simpan konfigurasi lokal di Termux
+
+Agar tidak mengetik key tiap kali, buat file **di luar repository**:
 
 ```sh
 nano ~/.ruangai-env
 ```
 
-Isi file dengan tiga baris `export` di atas, simpan, lalu:
+Masukkan `export OPENROUTER_API_KEY='...'` dan `export AI_MODEL='openrouter/auto'`, simpan, lalu:
 
 ```sh
 chmod 600 ~/.ruangai-env
@@ -52,37 +95,22 @@ cd ~/termux-ai-webserver
 node server.js
 ```
 
-Jangan membagikan file konfigurasi tersebut. Mengubah konfigurasi pada sesi Termux yang sedang berjalan tidak memerlukan perubahan kode.
+Jangan membagikan file tersebut atau memasukkan API key ke GitHub.
 
-## Opsi
-
-| Variabel | Default | Keterangan |
-|---|---|---|
-| `PORT` | `3000` | Port webserver |
-| `HOST` | `0.0.0.0` | Interface listen; default dapat diakses pada perangkat Android sendiri melalui `127.0.0.1` |
-| `OPENAI_API_KEY` | — | API key provider; wajib untuk chat |
-| `AI_BASE_URL` | `https://api.openai.com/v1` | Base URL API kompatibel OpenAI |
-| `AI_MODEL` | `gpt-4o-mini` | ID model yang dipilih |
-| `AI_PROVIDER_NAME` | `OpenAI-compatible API` | Label provider di status server |
-
-Jalankan di jaringan lokal dengan hati-hati: tanpa proxy HTTPS dan autentikasi tambahan, jangan mengekspos port server ke internet atau jaringan publik. Jangan mengunggah API key. Gunakan endpoint provider tepercaya.
-
-## Update kode dari GitHub
+## Update kode
 
 ```sh
 cd ~/termux-ai-webserver
 git pull
 ```
 
-Jika repository privat, pastikan Termux telah diberi autentikasi GitHub.
-
 ## Troubleshooting
 
-- **API key belum diatur** — ekspor `OPENAI_API_KEY` pada sesi Termux yang sama sebelum menjalankan server.
+- **Kunci OpenRouter belum diatur** — ekspor `OPENROUTER_API_KEY` pada sesi Termux yang sama sebelum menjalankan server.
 - **401 / unauthorized** — periksa API key dan status akun/provider.
-- **404 model atau endpoint** — pastikan `AI_BASE_URL` dan `AI_MODEL` sesuai dokumentasi provider.
+- **404 model atau endpoint** — pastikan ID model dan endpoint cocok dengan dokumentasi penyedia.
 - **Port sudah digunakan** — jalankan `PORT=3001 node server.js`, lalu buka `http://127.0.0.1:3001`.
-- **GitHub belum punya repo** — unggah folder proyek ke repository milik Anda terlebih dahulu; jangan memasukkan key API ke commit.
+- **Chat gagal di hosting** — pastikan secret `OPENROUTER_API_KEY` sudah diatur di hosting dan server di-restart setelah perubahan environment.
 
 ## Lisensi
 
